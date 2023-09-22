@@ -12,7 +12,6 @@ const (
 )
 
 type Config struct {
-	TgToken     string
 	Mode        Mode
 	ReleasePort int64
 	DebugPort   int64
@@ -32,7 +31,6 @@ func Load(path string) (*Config, error) {
 	}
 
 	return &Config{
-		TgToken:     cfg.Get("bot.tg_token").(string),
 		Mode:        Mode(cfg.Get("bot.mode").(string)),
 		ReleasePort: cfg.Get("bot.release_port").(int64),
 		DebugPort:   cfg.Get("bot.debug_port").(int64),
