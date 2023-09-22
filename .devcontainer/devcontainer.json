@@ -1,0 +1,21 @@
+{
+    "name" : "bot-dev",
+    "build" : {
+        "context" : "..",
+        "dockerfile" : "../docker/dev.Dockerfile"
+    },
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "cmstead.jsrefactor",
+                "bianxianyang.htmlplay",
+                "ecmel.vscode-html-css",
+                "aeschli.vscode-css-formatter",
+                "pranaygp.vscode-css-peek",
+                "golang.go",
+                "golang.go-nightly"
+            ]
+        }
+    }
+}

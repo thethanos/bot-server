@@ -1,0 +1,11 @@
+config.toml
+credentials.json
+token.json
+service_credentials.json
+*.db
+*.pem
+*.crt
+*.key
+images/*
+webapp/.DS_Store
+.DS_Store
