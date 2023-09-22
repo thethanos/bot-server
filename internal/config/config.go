@@ -31,10 +31,10 @@ func Load(path string) (*Config, error) {
 	}
 
 	return &Config{
-		Mode:        Mode(cfg.Get("bot.mode").(string)),
-		ReleasePort: cfg.Get("bot.release_port").(int64),
-		DebugPort:   cfg.Get("bot.debug_port").(int64),
-		ImagePrefix: cfg.Get("bot.image_prefix").(string),
+		Mode:        Mode(cfg.Get("bot-server.mode").(string)),
+		ReleasePort: cfg.Get("bot-server.release_port").(int64),
+		DebugPort:   cfg.Get("bot-server.debug_port").(int64),
+		ImagePrefix: cfg.Get("bot-server.image_prefix").(string),
 		PsqlHost:    cfg.Get("postgres.host").(string),
 		PsqlPort:    cfg.Get("postgres.port").(int64),
 		PsqlUser:    cfg.Get("postgres.user").(string),
