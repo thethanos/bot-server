@@ -396,6 +396,36 @@ func (d *DBAdapter) SaveMasterImageURL(masterID uint, URL string) error {
 	return nil
 }
 
+func (d *DBAdapter) UpdateCity(city *entities.City) error {
+
+	update := models.City{
+		Model: gorm.Model{
+			ID:        city.ID,
+			UpdatedAt: time.Now(),
+		},
+		Name: city.Name,
+	}
+
+	tx := d.DBConn.Begin()
+	defer tx.Rollback()
+
+	if err := tx.Save(&update).Error; err != nil {
+		return err
+	}
+
+	query := tx.Model(&models.MasterServRelation{}).Where("city_id = ?", city.ID)
+	if err := query.UpdateColumn("city_name", city.Name).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	d.logger.Infof("City name changed successfully: %s", city.Name)
+	return nil
+}
+
 func (d *DBAdapter) DeleteCity(id uint) error {
 	if err := d.DBConn.Where("id = ?", id).Delete(&models.City{}).Error; err != nil {
 		return err

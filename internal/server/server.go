@@ -37,6 +37,9 @@ func NewServer(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.DB
 	postRouter.HandleFunc("/masters/images/{master_id}", handler.SaveMasterImage)
 	postRouter.HandleFunc("/masters/approve/{master_id}", handler.ApproveMaster)
 
+	putHandler := router.Methods(http.MethodPut).Subrouter()
+	putHandler.HandleFunc("/cities", handler.UpdateCity)
+
 	deleteHandler := router.Methods(http.MethodDelete).Subrouter()
 	deleteHandler.HandleFunc("/cities/{city_id}", handler.DeleteCity)
 	deleteHandler.HandleFunc("/services/categories/{category_id}", handler.DeleteServCategory)

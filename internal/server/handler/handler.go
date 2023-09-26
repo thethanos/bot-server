@@ -557,6 +557,44 @@ func (h *Handler) ApproveMaster(rw http.ResponseWriter, req *http.Request) {
 	h.logger.Info("Response sent")
 }
 
+// @Summary Update city
+// @Description Change the city name
+// @Tags City
+// @Param city body entities.City true "City id and name"
+// @Accept json
+// @Produce json
+// @Success 204
+// @Failure 400 {string} string "Error message"
+// @Failure 404 {string} string "Error message"
+// @Failure 500 {string} string "Error message"
+// @Router /cities [put]
+func (h *Handler) UpdateCity(rw http.ResponseWriter, req *http.Request) {
+	h.logger.Infof("Request received: %s", req.URL)
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		h.logger.Error("server::UpdateCity::ReadAll")
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	city := &entities.City{}
+	if err := json.Unmarshal(body, city); err != nil {
+		h.logger.Error("server::UpdateCity::Unmarshal")
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.DBAdapter.UpdateCity(city); err != nil {
+		h.logger.Error("server::UpdateCity::UpdateCity")
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rw.WriteHeader(http.StatusNoContent)
+	h.logger.Info("Response sent")
+}
+
 // @Summary Delete city
 // @Description Delete a city from the system
 // @Tags City
