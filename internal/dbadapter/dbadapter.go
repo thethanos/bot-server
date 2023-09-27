@@ -422,8 +422,79 @@ func (d *DBAdapter) UpdateCity(city *entities.City) error {
 		return err
 	}
 
-	d.logger.Infof("City name changed successfully: %s", city.Name)
+	d.logger.Infof("City changed successfully: %s", city.Name)
 	return nil
+}
+
+func (d *DBAdapter) UpdateServCategory(category *entities.ServiceCategory) error {
+
+	update := models.ServiceCategory{
+		Model: gorm.Model{
+			ID:        category.ID,
+			UpdatedAt: time.Now(),
+		},
+		Name: category.Name,
+	}
+
+	tx := d.DBConn.Begin()
+	defer tx.Rollback()
+
+	if err := tx.Save(&update).Error; err != nil {
+		return err
+	}
+
+	query := tx.Model(&models.MasterServRelation{}).Where("serv_cat_id = ?", category.ID)
+	if err := query.UpdateColumn("serv_cat_name", category.Name).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	d.logger.Infof("Service category changed successfully: %s", category.Name)
+	return nil
+}
+
+func (d *DBAdapter) UpdateService(service *entities.Service) error {
+
+	update := models.Service{
+		Model: gorm.Model{
+			ID:        service.ID,
+			UpdatedAt: time.Now(),
+		},
+		CatID:   service.CatID,
+		CatName: service.CatName,
+		Name:    service.Name,
+	}
+
+	tx := d.DBConn.Begin()
+	defer tx.Rollback()
+
+	if err := tx.Save(&update).Error; err != nil {
+		return err
+	}
+
+	query := tx.Model(&models.MasterServRelation{}).Where("serv_cat_id = ?", service.CatID)
+	if err := query.UpdateColumn("serv_cat_name", service.CatName).Error; err != nil {
+		return err
+	}
+
+	query = tx.Model(&models.MasterServRelation{}).Where("serv_id = ?", service.ID)
+	if err := query.UpdateColumn("serv_name", service.Name).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	d.logger.Infof("Service changed successfully: %s", service.Name)
+	return nil
+}
+
+func (d *DBAdapter) UpdateMaster() {
+
 }
 
 func (d *DBAdapter) DeleteCity(id uint) error {

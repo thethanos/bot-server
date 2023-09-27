@@ -595,6 +595,82 @@ func (h *Handler) UpdateCity(rw http.ResponseWriter, req *http.Request) {
 	h.logger.Info("Response sent")
 }
 
+// @Summary Update service category
+// @Description Change the service categiry name
+// @Tags Service
+// @Param service body entities.ServiceCategory true "Service category id and name"
+// @Accept json
+// @Produce json
+// @Success 204
+// @Failure 400 {string} string "Error message"
+// @Failure 404 {string} string "Error message"
+// @Failure 500 {string} string "Error message"
+// @Router /services/categories [put]
+func (h *Handler) UpdateServCategory(rw http.ResponseWriter, req *http.Request) {
+	h.logger.Infof("Request received: %s", req.URL)
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		h.logger.Error("server::UpdateServCategory::ReadAll")
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	category := &entities.ServiceCategory{}
+	if err := json.Unmarshal(body, category); err != nil {
+		h.logger.Error("server::UpdateServCategory::Unmarshal")
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.DBAdapter.UpdateServCategory(category); err != nil {
+		h.logger.Error("server::UpdateServCategory::UpdateServCategory")
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rw.WriteHeader(http.StatusNoContent)
+	h.logger.Info("Response sent")
+}
+
+// @Summary Update service
+// @Description Change the service name or category
+// @Tags Service
+// @Param service body entities.Service true "Service category id, category name, id and name"
+// @Accept json
+// @Produce json
+// @Success 204
+// @Failure 400 {string} string "Error message"
+// @Failure 404 {string} string "Error message"
+// @Failure 500 {string} string "Error message"
+// @Router /services [put]
+func (h *Handler) UpdateService(rw http.ResponseWriter, req *http.Request) {
+	h.logger.Infof("Request received: %s", req.URL)
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		h.logger.Error("server::UpdateService::ReadAll")
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	service := &entities.Service{}
+	if err := json.Unmarshal(body, service); err != nil {
+		h.logger.Error("server::UpdateService::Unmarshal")
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.DBAdapter.UpdateService(service); err != nil {
+		h.logger.Error("server::UpdateService::UpdateService")
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rw.WriteHeader(http.StatusNoContent)
+	h.logger.Info("Response sent")
+}
+
 // @Summary Delete city
 // @Description Delete a city from the system
 // @Tags City
