@@ -39,6 +39,8 @@ func NewServer(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.DB
 
 	putHandler := router.Methods(http.MethodPut).Subrouter()
 	putHandler.HandleFunc("/cities", handler.UpdateCity)
+	putHandler.HandleFunc("/services/categories", handler.UpdateServCategory)
+	putHandler.HandleFunc("/services", handler.UpdateService)
 
 	deleteHandler := router.Methods(http.MethodDelete).Subrouter()
 	deleteHandler.HandleFunc("/cities/{city_id}", handler.DeleteCity)
