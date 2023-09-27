@@ -443,7 +443,12 @@ func (d *DBAdapter) UpdateServCategory(category *entities.ServiceCategory) error
 		return err
 	}
 
-	query := tx.Model(&models.MasterServRelation{}).Where("serv_cat_id = ?", category.ID)
+	query := tx.Model(&models.Service{}).Where("cat_id = ?", category.ID)
+	if err := query.UpdateColumn("cat_name", category.Name).Error; err != nil {
+		return err
+	}
+
+	query = tx.Model(&models.MasterServRelation{}).Where("serv_cat_id = ?", category.ID)
 	if err := query.UpdateColumn("serv_cat_name", category.Name).Error; err != nil {
 		return err
 	}
