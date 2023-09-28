@@ -239,6 +239,22 @@ func (d *DBAdapter) GetMasterImageURLs(masterID uint) ([]string, error) {
 	return result, nil
 }
 
+func (d *DBAdapter) SaveCity(name string) (uint, error) {
+	id := uint(time.Now().Unix())
+	city := &models.City{
+		Model: gorm.Model{
+			ID:        id,
+			CreatedAt: time.Now(),
+		},
+		Name: name,
+	}
+	if err := d.DBConn.Create(city).Error; err != nil {
+		return 0, err
+	}
+	d.logger.Infof("New city added successfully, id: %d, name: %s", id, name)
+	return id, nil
+}
+
 func (d *DBAdapter) SaveServiceCategory(name string) (uint, error) {
 	id := uint(time.Now().Unix())
 	service := &models.ServiceCategory{
@@ -276,22 +292,6 @@ func (d *DBAdapter) SaveService(name string, categoryID uint) (uint, error) {
 		return 0, err
 	}
 	d.logger.Infof("New service added successfully, id: %d, name: %s", id, name)
-	return id, nil
-}
-
-func (d *DBAdapter) SaveCity(name string) (uint, error) {
-	id := uint(time.Now().Unix())
-	city := &models.City{
-		Model: gorm.Model{
-			ID:        id,
-			CreatedAt: time.Now(),
-		},
-		Name: name,
-	}
-	if err := d.DBConn.Create(city).Error; err != nil {
-		return 0, err
-	}
-	d.logger.Infof("New city added successfully, id: %d, name: %s", id, name)
 	return id, nil
 }
 
@@ -463,14 +463,25 @@ func (d *DBAdapter) UpdateServCategory(category *entities.ServiceCategory) error
 
 func (d *DBAdapter) UpdateService(service *entities.Service) error {
 
+	category := models.ServiceCategory{}
+	if err := d.DBConn.Where("id = ?", service.CatID).First(&category).Error; err != nil {
+		return err
+	}
+
 	update := models.Service{
 		Model: gorm.Model{
 			ID:        service.ID,
 			UpdatedAt: time.Now(),
 		},
-		CatID:   service.CatID,
-		CatName: service.CatName,
+		CatID:   category.ID,
+		CatName: category.Name,
 		Name:    service.Name,
+	}
+
+	relation := models.MasterServRelation{
+		ServCatID:   update.CatID,
+		ServCatName: update.CatName,
+		ServName:    update.Name,
 	}
 
 	tx := d.DBConn.Begin()
@@ -480,13 +491,8 @@ func (d *DBAdapter) UpdateService(service *entities.Service) error {
 		return err
 	}
 
-	query := tx.Model(&models.MasterServRelation{}).Where("serv_cat_id = ?", service.CatID)
-	if err := query.UpdateColumn("serv_cat_name", service.CatName).Error; err != nil {
-		return err
-	}
-
-	query = tx.Model(&models.MasterServRelation{}).Where("serv_id = ?", service.ID)
-	if err := query.UpdateColumn("serv_name", service.Name).Error; err != nil {
+	query := tx.Model(&models.MasterServRelation{}).Where("serv_id = ?", service.ID)
+	if err := query.UpdateColumns(&relation).Error; err != nil {
 		return err
 	}
 
