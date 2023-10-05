@@ -337,7 +337,7 @@ func (d *DBAdapter) SaveMaster(id uint) (uint, error) {
 	result := make([]*models.MasterServRelation, 0)
 	for _, master := range masters {
 		result = append(result, &models.MasterServRelation{
-			ID:          id,
+			ID:          master.ID,
 			CreatedAt:   time.Now(),
 			MasterID:    master.MasterID,
 			Name:        master.Name,
