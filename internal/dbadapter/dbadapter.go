@@ -242,11 +242,9 @@ func (d *DBAdapter) GetMasterImageURLs(masterID uint) ([]string, error) {
 func (d *DBAdapter) SaveCity(name string) (uint, error) {
 	id := uint(time.Now().Unix())
 	city := &models.City{
-		Model: gorm.Model{
-			ID:        id,
-			CreatedAt: time.Now(),
-		},
-		Name: name,
+		ID:        id,
+		CreatedAt: time.Now(),
+		Name:      name,
 	}
 	if err := d.DBConn.Create(city).Error; err != nil {
 		return 0, err
@@ -258,11 +256,9 @@ func (d *DBAdapter) SaveCity(name string) (uint, error) {
 func (d *DBAdapter) SaveServiceCategory(name string) (uint, error) {
 	id := uint(time.Now().Unix())
 	service := &models.ServiceCategory{
-		Model: gorm.Model{
-			ID:        id,
-			CreatedAt: time.Now(),
-		},
-		Name: name,
+		ID:        id,
+		CreatedAt: time.Now(),
+		Name:      name,
 	}
 	if err := d.DBConn.Create(service).Error; err != nil {
 		return 0, err
@@ -280,13 +276,11 @@ func (d *DBAdapter) SaveService(name string, categoryID uint) (uint, error) {
 	}
 
 	service := &models.Service{
-		Model: gorm.Model{
-			ID:        id,
-			CreatedAt: time.Now(),
-		},
-		Name:    name,
-		CatID:   category.ID,
-		CatName: category.Name,
+		ID:        id,
+		CreatedAt: time.Now(),
+		Name:      name,
+		CatID:     category.ID,
+		CatName:   category.Name,
 	}
 	if err := d.DBConn.Create(service).Error; err != nil {
 		return 0, err
@@ -303,9 +297,7 @@ func (d *DBAdapter) SaveMasterRegForm(master *entities.MasterRegForm) (uint, err
 
 	id := uint(time.Now().Unix())
 	regForm := models.MasterRegForm{
-		Model: gorm.Model{
-			CreatedAt: time.Now(),
-		},
+		CreatedAt:   time.Now(),
 		MasterID:    id,
 		Name:        master.Name,
 		Contact:     master.Contact,
@@ -345,10 +337,8 @@ func (d *DBAdapter) SaveMaster(id uint) (uint, error) {
 	result := make([]*models.MasterServRelation, 0)
 	for _, master := range masters {
 		result = append(result, &models.MasterServRelation{
-			Model: gorm.Model{
-				ID:        master.ID,
-				CreatedAt: time.Now(),
-			},
+			ID:          id,
+			CreatedAt:   time.Now(),
 			MasterID:    master.MasterID,
 			Name:        master.Name,
 			Description: master.Description,
@@ -399,11 +389,9 @@ func (d *DBAdapter) SaveMasterImageURL(masterID uint, URL string) error {
 func (d *DBAdapter) UpdateCity(city *entities.City) error {
 
 	update := models.City{
-		Model: gorm.Model{
-			ID:        city.ID,
-			UpdatedAt: time.Now(),
-		},
-		Name: city.Name,
+		ID:        city.ID,
+		CreatedAt: time.Now(),
+		Name:      city.Name,
 	}
 
 	tx := d.DBConn.Begin()
@@ -429,11 +417,9 @@ func (d *DBAdapter) UpdateCity(city *entities.City) error {
 func (d *DBAdapter) UpdateServCategory(category *entities.ServiceCategory) error {
 
 	update := models.ServiceCategory{
-		Model: gorm.Model{
-			ID:        category.ID,
-			UpdatedAt: time.Now(),
-		},
-		Name: category.Name,
+		ID:        category.ID,
+		CreatedAt: time.Now(),
+		Name:      category.Name,
 	}
 
 	tx := d.DBConn.Begin()
@@ -469,13 +455,11 @@ func (d *DBAdapter) UpdateService(service *entities.Service) error {
 	}
 
 	update := models.Service{
-		Model: gorm.Model{
-			ID:        service.ID,
-			UpdatedAt: time.Now(),
-		},
-		CatID:   category.ID,
-		CatName: category.Name,
-		Name:    service.Name,
+		ID:        service.ID,
+		CreatedAt: time.Now(),
+		CatID:     category.ID,
+		CatName:   category.Name,
+		Name:      service.Name,
 	}
 
 	relation := models.MasterServRelation{
