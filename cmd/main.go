@@ -4,6 +4,7 @@ import (
 	"bot/internal/config"
 	"bot/internal/dbadapter"
 	"bot/internal/logger"
+	"bot/internal/minioadapter"
 	srv "bot/internal/server"
 	"context"
 	"fmt"
@@ -32,7 +33,13 @@ func main() {
 		return
 	}
 
-	server, err := srv.NewServer(logger, cfg, DBAdapter)
+	MinIOAdapter, err := minioadapter.NewMinIOAdapter(logger, cfg)
+	if err != nil {
+		logger.Error("main::minioadapter::NewMinIOAdapter", err)
+		return
+	}
+
+	server, err := srv.NewServer(logger, cfg, DBAdapter, MinIOAdapter)
 	if err != nil {
 		logger.Error("main::server::NewServer", err)
 		return

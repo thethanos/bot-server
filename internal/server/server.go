@@ -4,6 +4,7 @@ import (
 	"bot/internal/config"
 	"bot/internal/dbadapter"
 	"bot/internal/logger"
+	"bot/internal/minioadapter"
 	handler "bot/internal/server/handler"
 	corsMiddleware "bot/internal/server/middleware"
 	"errors"
@@ -14,9 +15,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func NewServer(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.DBAdapter) (*http.Server, error) {
+func NewServer(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.DBAdapter, MinIOAdapter *minioadapter.MinIOAdapter) (*http.Server, error) {
 
-	handler := handler.NewHandler(logger, cfg, DBAdapter)
+	handler := handler.NewHandler(logger, cfg, DBAdapter, MinIOAdapter)
 	docHandler := middleware.Redoc(middleware.RedocOpts{SpecURL: "swagger.yaml"}, nil)
 
 	router := mux.NewRouter()

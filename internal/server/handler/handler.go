@@ -5,6 +5,7 @@ import (
 	"bot/internal/dbadapter"
 	"bot/internal/entities"
 	"bot/internal/logger"
+	"bot/internal/minioadapter"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,16 +17,18 @@ import (
 )
 
 type Handler struct {
-	logger    logger.Logger
-	cfg       *config.Config
-	DBAdapter *dbadapter.DBAdapter
+	logger       logger.Logger
+	cfg          *config.Config
+	DBAdapter    *dbadapter.DBAdapter
+	MinIOAdapter *minioadapter.MinIOAdapter
 }
 
-func NewHandler(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.DBAdapter) *Handler {
+func NewHandler(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.DBAdapter, MinIOAdapter *minioadapter.MinIOAdapter) *Handler {
 	return &Handler{
-		logger:    logger,
-		cfg:       cfg,
-		DBAdapter: DBAdapter,
+		logger:       logger,
+		cfg:          cfg,
+		DBAdapter:    DBAdapter,
+		MinIOAdapter: MinIOAdapter,
 	}
 }
 
@@ -427,6 +430,12 @@ func (h *Handler) SaveMasterRegForm(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if err := h.MinIOAdapter.MakeBucket(fmt.Sprintf("%d", id)); err != nil {
+		h.logger.Error("server::SaveMasterRegForm::MakeBucket", err)
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// temporary, while the approvement mechanism is not integrated
 	if _, err := h.DBAdapter.SaveMaster(id); err != nil {
 		h.logger.Error("server::SaveMasterRegForm::SaveMaster", err)
@@ -479,29 +488,9 @@ func (h *Handler) SaveMasterImage(rw http.ResponseWriter, req *http.Request) {
 	}
 	defer formFile.Close()
 
-	if err := os.MkdirAll(fmt.Sprintf("./images/%d", masterID), os.ModePerm); err != nil {
-		h.logger.Error("server::SaveMasterImage::MkdirAll", err)
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	image, err := os.Create(fmt.Sprintf("./images/%d/%s", masterID, meta.Filename))
-	if err != nil {
-		h.logger.Error("server::SaveMasterImage::Create", err)
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	imageBytes, err := io.ReadAll(formFile)
-	if err != nil {
-		h.logger.Error("server::SaveMasterImage::ReadAll", err)
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if _, err := image.Write(imageBytes); err != nil {
-		h.logger.Error("server::SaveMasterImage::Write", err)
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	if err := h.MinIOAdapter.PutObject(fmt.Sprintf("%d", masterID), meta.Filename, formFile, meta.Size); err != nil {
+		h.logger.Error("server::SaveMasterImage::PutObject", err)
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 
