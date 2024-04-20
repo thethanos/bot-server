@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
@@ -60,7 +59,7 @@ func (h *Handler) GetCities(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	cities, err := h.DBAdapter.GetCities(0, page, limit)
+	cities, err := h.DBAdapter.GetCities("", page, limit)
 	if err != nil {
 		h.logger.Error("server::GetCities::GetCities", err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -111,7 +110,7 @@ func (h *Handler) GetServiceCategories(rw http.ResponseWriter, req *http.Request
 		return
 	}
 
-	categories, err := h.DBAdapter.GetServCategories(0, page, limit)
+	categories, err := h.DBAdapter.GetServCategories("", page, limit)
 	if err != nil {
 		h.logger.Error("server::GetCategories::GetCategories", err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -163,14 +162,7 @@ func (h *Handler) GetServices(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	categoryID, err := getParam[uint](query.Get("category_id"), 0)
-	if err != nil {
-		h.logger.Error("server::GetCities::getParam[uint]", err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	services, err := h.DBAdapter.GetServices(categoryID, 0, page, limit)
+	services, err := h.DBAdapter.GetServices(query.Get("category_id"), "", page, limit)
 	if err != nil {
 		h.logger.Error("server::GetServices::GetServices", err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -224,21 +216,7 @@ func (h *Handler) GetMasters(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	cityID, err := getParam[uint](query.Get("city_id"), 0)
-	if err != nil {
-		h.logger.Error("server::GetMasters::getParam[uint]", err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	serviceID, err := getParam[uint](query.Get("service_id"), 0)
-	if err != nil {
-		h.logger.Error("server::GetMasters::getParam[uint]", err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	masters, err := h.DBAdapter.GetMasters(cityID, 0, serviceID, page, limit)
+	masters, err := h.DBAdapter.GetMasters(query.Get("city_id"), "", query.Get("service_id"), page, limit)
 	if err != nil {
 		h.logger.Error("server::GetMasters::GetMasters", err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -296,7 +274,7 @@ func (h *Handler) SaveCity(rw http.ResponseWriter, req *http.Request) {
 
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusCreated)
-	if _, err := rw.Write([]byte(fmt.Sprintf(`{ "id" : "%d" }`, id))); err != nil {
+	if _, err := rw.Write([]byte(fmt.Sprintf(`{ "id" : "%s" }`, id))); err != nil {
 		h.logger.Error("server::SaveCity::Write", err)
 		return
 	}
@@ -339,7 +317,7 @@ func (h *Handler) SaveServiceCategory(rw http.ResponseWriter, req *http.Request)
 
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusCreated)
-	if _, err := rw.Write([]byte(fmt.Sprintf(`{ "id" : "%d" }`, id))); err != nil {
+	if _, err := rw.Write([]byte(fmt.Sprintf(`{ "id" : "%s" }`, id))); err != nil {
 		h.logger.Error("server::SaveServiceCategory::Write", err)
 		return
 	}
@@ -382,7 +360,7 @@ func (h *Handler) SaveService(rw http.ResponseWriter, req *http.Request) {
 
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusCreated)
-	if _, err := rw.Write([]byte(fmt.Sprintf(`{ "id" : "%d" }`, id))); err != nil {
+	if _, err := rw.Write([]byte(fmt.Sprintf(`{ "id" : "%s" }`, id))); err != nil {
 		h.logger.Error("server::SaveService::Write", err)
 		return
 	}
@@ -430,7 +408,7 @@ func (h *Handler) SaveMasterRegForm(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := h.MinIOAdapter.MakeBucket(fmt.Sprintf("%d", id)); err != nil {
+	if err := h.MinIOAdapter.MakeBucket(id); err != nil {
 		h.logger.Error("server::SaveMasterRegForm::MakeBucket", err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
@@ -445,7 +423,7 @@ func (h *Handler) SaveMasterRegForm(rw http.ResponseWriter, req *http.Request) {
 
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusCreated)
-	if _, err := rw.Write([]byte(fmt.Sprintf(`{ "id" : "%d" }`, id))); err != nil {
+	if _, err := rw.Write([]byte(fmt.Sprintf(`{ "id" : "%s" }`, id))); err != nil {
 		h.logger.Error("server::SaveMasterRegForm::Write", err)
 		return
 	}
@@ -467,12 +445,7 @@ func (h *Handler) SaveMasterImage(rw http.ResponseWriter, req *http.Request) {
 	h.logger.Infof("Request received: %s", req.URL)
 
 	params := mux.Vars(req)
-	masterID, err := getParam[uint](params["master_id"], 0)
-	if err != nil {
-		h.logger.Error("server::SaveMasterImage::getParam[uint]", err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
+	masterID := params["master_id"]
 
 	if err := req.ParseMultipartForm(10 << 20); err != nil {
 		h.logger.Error("server::SaveMasterImage::ParseMultipartForm", err)
@@ -488,13 +461,13 @@ func (h *Handler) SaveMasterImage(rw http.ResponseWriter, req *http.Request) {
 	}
 	defer formFile.Close()
 
-	if err := h.MinIOAdapter.PutObject(fmt.Sprintf("%d", masterID), meta.Filename, formFile, meta.Size); err != nil {
+	if err := h.MinIOAdapter.PutObject(masterID, meta.Filename, formFile, meta.Size, meta.Header.Get("Content-Type")); err != nil {
 		h.logger.Error("server::SaveMasterImage::PutObject", err)
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	imgUrl := fmt.Sprintf("%s/%d/%s", h.cfg.ImagePrefix, masterID, meta.Filename)
+	imgUrl := fmt.Sprintf("%s/%s/%s", h.cfg.ImagePrefix, masterID, meta.Filename)
 	if err := h.DBAdapter.SaveMasterImageURL(masterID, imgUrl); err != nil {
 		h.logger.Error("server::SaveMasterImage::SaveMasterImageURL", err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -524,12 +497,7 @@ func (h *Handler) ApproveMaster(rw http.ResponseWriter, req *http.Request) {
 	h.logger.Infof("Request received: %s", req.URL)
 
 	params := mux.Vars(req)
-	masterID, err := getParam[uint](params["master_id"], 0)
-	if err != nil {
-		h.logger.Error("server::ApproveMaster::getParam[uint]", err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
+	masterID := params["master_id"]
 
 	if _, err := h.DBAdapter.SaveMaster(masterID); err != nil {
 		h.logger.Error("server::ApproveMaster::SaveMaster", err)
@@ -539,7 +507,7 @@ func (h *Handler) ApproveMaster(rw http.ResponseWriter, req *http.Request) {
 
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusCreated)
-	if _, err := rw.Write([]byte(fmt.Sprintf(`{ "id" : "%d" }`, masterID))); err != nil {
+	if _, err := rw.Write([]byte(fmt.Sprintf(`{ "id" : "%s" }`, masterID))); err != nil {
 		h.logger.Error("server::ApproveMaster::Write", err)
 		return
 	}
@@ -674,14 +642,8 @@ func (h *Handler) DeleteCity(rw http.ResponseWriter, req *http.Request) {
 	h.logger.Infof("Request received: %s", req.URL)
 
 	params := mux.Vars(req)
-	cityID, err := getParam[uint](params["city_id"], 0)
-	if err != nil {
-		h.logger.Error("server::DeleteCity::getParam[uint]", err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
 
-	if err := h.DBAdapter.DeleteCity(cityID); err != nil {
+	if err := h.DBAdapter.DeleteCity(params["city_id"]); err != nil {
 		h.logger.Error("server::DeleteCity::DeleteCity", err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
@@ -704,14 +666,8 @@ func (h *Handler) DeleteServCategory(rw http.ResponseWriter, req *http.Request) 
 	h.logger.Infof("Request received: %s", req.URL)
 
 	params := mux.Vars(req)
-	catID, err := getParam[uint](params["category_id"], 0)
-	if err != nil {
-		h.logger.Error("server::DeleteServCategory::getParam[uint]", err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
 
-	if err := h.DBAdapter.DeleteServCategory(catID); err != nil {
+	if err := h.DBAdapter.DeleteServCategory(params["category_id"]); err != nil {
 		h.logger.Error("server::DeleteServCategory::DeleteServCategory", err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
@@ -734,14 +690,8 @@ func (h *Handler) DeleteService(rw http.ResponseWriter, req *http.Request) {
 	h.logger.Infof("Request received: %s", req.URL)
 
 	params := mux.Vars(req)
-	servID, err := getParam[uint](params["service_id"], 0)
-	if err != nil {
-		h.logger.Error("server::DeleteService::getParam[uint]", err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
 
-	if err := h.DBAdapter.DeleteService(servID); err != nil {
+	if err := h.DBAdapter.DeleteService(params["service_id"]); err != nil {
 		h.logger.Error("server::DeleteService::DeleteService", err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
@@ -764,23 +714,14 @@ func (h *Handler) DeleteMaster(rw http.ResponseWriter, req *http.Request) {
 	h.logger.Infof("Request received: %s", req.URL)
 
 	params := mux.Vars(req)
-	masterID, err := getParam[uint](params["master_id"], 0)
-	if err != nil {
-		h.logger.Error("server::DeleteMaster::getParam[uint]", err)
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
 
-	if err := h.DBAdapter.DeleteMaster(masterID); err != nil {
+	if err := h.DBAdapter.DeleteMaster(params["master_id"]); err != nil {
 		h.logger.Error("server::DeleteMaster::DeleteMaster", err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if err := os.RemoveAll(fmt.Sprintf("./images/%d", masterID)); err != nil {
-		// non critical error, just logging it
-		h.logger.Error("server::DeleteMaster::RemoveAll", err)
-	}
+	// delete from minio here
 
 	rw.WriteHeader(http.StatusOK)
 	h.logger.Info("Response sent")

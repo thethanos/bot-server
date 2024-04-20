@@ -17,37 +17,37 @@ func main() {
 
 	cfg, err := config.Load("config.toml")
 	if err != nil {
-		panic(fmt.Sprintf("main::config::Load::%s", err))
+		panic(fmt.Sprintf("main::config::Load: %s", err))
 	}
 
-	logger := logger.NewLogger(cfg.Mode)
+	logger := logger.NewLogger()
 
 	DBAdapter, err := dbadapter.NewDbAdapter(logger, cfg)
 	if err != nil {
-		logger.Error("main::dbadapter::NewDBAdapter", err)
+		logger.Error("main::dbadapter::NewDBAdapter: ", err)
 		return
 	}
 
 	if err := DBAdapter.AutoMigrate(); err != nil {
-		logger.Error("main::dbadapter::AutoMigrate", err)
+		logger.Error("main::dbadapter::AutoMigrate: ", err)
 		return
 	}
 
 	MinIOAdapter, err := minioadapter.NewMinIOAdapter(logger, cfg)
 	if err != nil {
-		logger.Error("main::minioadapter::NewMinIOAdapter", err)
+		logger.Error("main::minioadapter::NewMinIOAdapter: ", err)
 		return
 	}
 
 	server, err := srv.NewServer(logger, cfg, DBAdapter, MinIOAdapter)
 	if err != nil {
-		logger.Error("main::server::NewServer", err)
+		logger.Error("main::server::NewServer: ", err)
 		return
 	}
 
 	go func() {
 		if err := server.ListenAndServeTLS("dev-full.crt", "dev-key.key"); err != nil {
-			logger.Fatal("main::server::ListenAndServe", err)
+			logger.Fatal("main::server::ListenAndServe: ", err)
 		}
 	}()
 
@@ -55,7 +55,7 @@ func main() {
 	<-signalHandler
 
 	if err := server.Shutdown(context.Background()); err != nil {
-		logger.Error("main::server::Shutdown", err)
+		logger.Error("main::server::Shutdown: ", err)
 	}
 }
 

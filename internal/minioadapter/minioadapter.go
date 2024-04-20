@@ -65,14 +65,26 @@ func (m *MinIOAdapter) MakeBucket(bucketName string) error {
 		return err
 	}
 
+	m.logger.Infof("Bucket created: %s", bucketName)
 	return nil
 }
 
-func (m *MinIOAdapter) PutObject(bucketName, objectName string, file io.Reader, size int64) error {
-	options := minio.PutObjectOptions{}
+func (m *MinIOAdapter) PutObject(bucketName, objectName string, file io.Reader, size int64, contentType string) error {
+	options := minio.PutObjectOptions{
+		ContentType: contentType,
+	}
 	if _, err := m.client.PutObject(context.Background(), bucketName, objectName, file, size, options); err != nil {
 		return err
 	}
 
+	m.logger.Infof("Object saved: %s %s", bucketName, objectName)
+	return nil
+}
+
+func (m *MinIOAdapter) DeleteObject(bucketName, objectName string) error {
+	return nil
+}
+
+func (m *MinIOAdapter) DeleteBucket(bucketName string) error {
 	return nil
 }

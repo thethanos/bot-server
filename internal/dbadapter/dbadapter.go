@@ -10,6 +10,7 @@ import (
 
 	"bot/internal/logger"
 
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -62,9 +63,9 @@ func (d *DBAdapter) AutoMigrate() error {
 	return nil
 }
 
-func (d *DBAdapter) GetCities(servID uint, page, limit int) ([]*entities.City, error) {
+func (d *DBAdapter) GetCities(servID string, page, limit int) ([]*entities.City, error) {
 
-	if servID != 0 {
+	if len(servID) != 0 {
 		return d.GetCitiesByService(servID, page, limit)
 	}
 
@@ -81,7 +82,7 @@ func (d *DBAdapter) GetCities(servID uint, page, limit int) ([]*entities.City, e
 	return result, nil
 }
 
-func (d *DBAdapter) GetCitiesByService(servID uint, page, limit int) ([]*entities.City, error) {
+func (d *DBAdapter) GetCitiesByService(servID string, page, limit int) ([]*entities.City, error) {
 
 	masterServRelations := make([]*models.MasterServRelation, 0)
 	query := d.DBConn.Offset(page * limit).Limit(limit)
@@ -101,9 +102,9 @@ func (d *DBAdapter) GetCitiesByService(servID uint, page, limit int) ([]*entitie
 	return result, nil
 }
 
-func (d *DBAdapter) GetServCategories(cityID uint, page, limit int) ([]*entities.ServiceCategory, error) {
+func (d *DBAdapter) GetServCategories(cityID string, page, limit int) ([]*entities.ServiceCategory, error) {
 
-	if cityID != 0 {
+	if len(cityID) != 0 {
 		return d.GetServCategoriesByCity(cityID, page, limit)
 	}
 
@@ -120,7 +121,7 @@ func (d *DBAdapter) GetServCategories(cityID uint, page, limit int) ([]*entities
 	return result, nil
 }
 
-func (d *DBAdapter) GetServCategoriesByCity(cityID uint, page, limit int) ([]*entities.ServiceCategory, error) {
+func (d *DBAdapter) GetServCategoriesByCity(cityID string, page, limit int) ([]*entities.ServiceCategory, error) {
 
 	masterServRelations := make([]*models.MasterServRelation, 0)
 	query := d.DBConn.Offset(page * limit).Limit(limit)
@@ -140,20 +141,20 @@ func (d *DBAdapter) GetServCategoriesByCity(cityID uint, page, limit int) ([]*en
 	return result, nil
 }
 
-func (d *DBAdapter) GetServices(categoryID, cityID uint, page, limit int) ([]*entities.Service, error) {
+func (d *DBAdapter) GetServices(categoryID, cityID string, page, limit int) ([]*entities.Service, error) {
 
-	if cityID != 0 {
+	if len(cityID) != 0 {
 		return d.GetServicesByCity(categoryID, cityID, page, limit)
 	}
 
 	return d.GetServicesByCategory(categoryID, page, limit)
 }
 
-func (d *DBAdapter) GetServicesByCity(categoryID, cityID uint, page, limit int) ([]*entities.Service, error) {
+func (d *DBAdapter) GetServicesByCity(categoryID, cityID string, page, limit int) ([]*entities.Service, error) {
 
 	masterServRelations := make([]*models.MasterServRelation, 0)
 	query := d.DBConn.Offset(page * limit).Limit(limit)
-	if categoryID != 0 {
+	if len(categoryID) != 0 {
 		query = query.Where("serv_cat_id = ?", categoryID)
 	}
 
@@ -175,10 +176,10 @@ func (d *DBAdapter) GetServicesByCity(categoryID, cityID uint, page, limit int) 
 	return result, nil
 }
 
-func (d *DBAdapter) GetServicesByCategory(categoryID uint, page, limit int) ([]*entities.Service, error) {
+func (d *DBAdapter) GetServicesByCategory(categoryID string, page, limit int) ([]*entities.Service, error) {
 
 	query := d.DBConn.Offset(page * limit).Limit(limit)
-	if categoryID != 0 {
+	if len(categoryID) != 0 {
 		query = query.Where("cat_id = ?", categoryID)
 	}
 
@@ -195,16 +196,16 @@ func (d *DBAdapter) GetServicesByCategory(categoryID uint, page, limit int) ([]*
 	return result, nil
 }
 
-func (d *DBAdapter) GetMasters(cityID, servCatID, servID uint, page, limit int) ([]*entities.Master, error) {
+func (d *DBAdapter) GetMasters(cityID, servCatID, servID string, page, limit int) ([]*entities.Master, error) {
 
 	query := d.DBConn.Offset(page * limit).Limit(limit)
-	if cityID != 0 {
+	if len(cityID) != 0 {
 		query = query.Where("city_id = ?", cityID)
 	}
-	if servCatID != 0 {
+	if len(servCatID) != 0 {
 		query = query.Where("serv_cat_id = ?", servCatID)
 	}
-	if servID != 0 {
+	if len(servID) != 0 {
 		query = query.Where("serv_id = ?", servID)
 	}
 
@@ -224,7 +225,7 @@ func (d *DBAdapter) GetMasters(cityID, servCatID, servID uint, page, limit int) 
 	return result, nil
 }
 
-func (d *DBAdapter) GetMasterImageURLs(masterID uint) ([]string, error) {
+func (d *DBAdapter) GetMasterImageURLs(masterID string) ([]string, error) {
 
 	urlRecs := make([]*models.MasterImages, 0)
 	if err := d.DBConn.Where("master_id = ?", masterID).Find(&urlRecs).Error; err != nil {
@@ -239,40 +240,40 @@ func (d *DBAdapter) GetMasterImageURLs(masterID uint) ([]string, error) {
 	return result, nil
 }
 
-func (d *DBAdapter) SaveCity(name string) (uint, error) {
-	id := uint(time.Now().Unix())
+func (d *DBAdapter) SaveCity(name string) (string, error) {
+	id := uuid.NewString()
 	city := &models.City{
 		ID:        id,
 		CreatedAt: time.Now(),
 		Name:      name,
 	}
 	if err := d.DBConn.Create(city).Error; err != nil {
-		return 0, err
+		return "", err
 	}
-	d.logger.Infof("New city added successfully, id: %d, name: %s", id, name)
+	d.logger.Infof("New city added successfully, id: %s, name: %s", id, name)
 	return id, nil
 }
 
-func (d *DBAdapter) SaveServiceCategory(name string) (uint, error) {
-	id := uint(time.Now().Unix())
+func (d *DBAdapter) SaveServiceCategory(name string) (string, error) {
+	id := uuid.NewString()
 	service := &models.ServiceCategory{
 		ID:        id,
 		CreatedAt: time.Now(),
 		Name:      name,
 	}
 	if err := d.DBConn.Create(service).Error; err != nil {
-		return 0, err
+		return "", err
 	}
-	d.logger.Infof("New service category added successfully, id: %d, name: %s", id, name)
+	d.logger.Infof("New service category added successfully, id: %s, name: %s", id, name)
 	return id, nil
 }
 
-func (d *DBAdapter) SaveService(name string, categoryID uint) (uint, error) {
-	id := uint(time.Now().Unix())
+func (d *DBAdapter) SaveService(name, categoryID string) (string, error) {
+	id := uuid.NewString()
 
 	category := models.ServiceCategory{}
 	if err := d.DBConn.Where("id = ?", categoryID).First(&category).Error; err != nil {
-		return 0, err
+		return "", err
 	}
 
 	service := &models.Service{
@@ -283,19 +284,19 @@ func (d *DBAdapter) SaveService(name string, categoryID uint) (uint, error) {
 		CatName:   category.Name,
 	}
 	if err := d.DBConn.Create(service).Error; err != nil {
-		return 0, err
+		return "", err
 	}
-	d.logger.Infof("New service added successfully, id: %d, name: %s", id, name)
+	d.logger.Infof("New service added successfully, id: %s, name: %s", id, name)
 	return id, nil
 }
 
-func (d *DBAdapter) SaveMasterRegForm(master *entities.MasterRegForm) (uint, error) {
+func (d *DBAdapter) SaveMasterRegForm(master *entities.MasterRegForm) (string, error) {
 	city := models.City{}
 	if err := d.DBConn.Where("id = ?", master.CityID).First(&city).Error; err != nil {
-		return 0, err
+		return "", err
 	}
 
-	id := uint(time.Now().Unix())
+	id := uuid.NewString()
 	regForm := models.MasterRegForm{
 		CreatedAt:   time.Now(),
 		MasterID:    id,
@@ -307,12 +308,12 @@ func (d *DBAdapter) SaveMasterRegForm(master *entities.MasterRegForm) (uint, err
 	}
 
 	forms := make([]models.MasterRegForm, 0)
-	for index, servID := range master.ServIDs {
+	for _, servID := range master.ServIDs {
 		service := models.Service{}
 		if err := d.DBConn.Where("id = ?", servID).First(&service).Error; err != nil {
-			return 0, err
+			return "", err
 		}
-		regForm.ID = id + uint(index)
+		regForm.ID = uuid.NewString()
 		regForm.ServCatID = service.CatID
 		regForm.ServCatName = service.CatName
 		regForm.ServID = service.ID
@@ -321,17 +322,17 @@ func (d *DBAdapter) SaveMasterRegForm(master *entities.MasterRegForm) (uint, err
 	}
 
 	if err := d.DBConn.Create(&forms).Error; err != nil {
-		return 0, err
+		return "", err
 	}
-	d.logger.Infof("Form saved successfully, id: %d, name: %s", id, master.Name)
+	d.logger.Infof("Form saved successfully, id: %s, name: %s", id, master.Name)
 	return id, nil
 }
 
-func (d *DBAdapter) SaveMaster(id uint) (uint, error) {
+func (d *DBAdapter) SaveMaster(id string) (string, error) {
 
 	masters := make([]*models.MasterRegForm, 0)
 	if err := d.DBConn.Where("master_id = ?", id).Find(&masters).Error; err != nil {
-		return 0, err
+		return "", err
 	}
 
 	result := make([]*models.MasterServRelation, 0)
@@ -356,22 +357,22 @@ func (d *DBAdapter) SaveMaster(id uint) (uint, error) {
 	defer tx.Rollback()
 
 	if err := tx.Create(&result).Error; err != nil {
-		return 0, err
+		return "", err
 	}
 
 	if err := tx.Where("master_id = ?", id).Delete(&models.MasterRegForm{}).Error; err != nil {
-		return 0, err
+		return "", err
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		return 0, err
+		return "", err
 	}
 
-	d.logger.Infof("New master added successfully, id: %d", id)
+	d.logger.Infof("New master added successfully, id: %s", id)
 	return id, nil
 }
 
-func (d *DBAdapter) SaveMasterImageURL(masterID uint, URL string) error {
+func (d *DBAdapter) SaveMasterImageURL(masterID, URL string) error {
 
 	urlRec := models.MasterImages{
 		MasterID: masterID,
@@ -492,16 +493,16 @@ func (d *DBAdapter) UpdateMaster() {
 
 }
 
-func (d *DBAdapter) DeleteCity(id uint) error {
+func (d *DBAdapter) DeleteCity(id string) error {
 	if err := d.DBConn.Where("id = ?", id).Delete(&models.City{}).Error; err != nil {
 		return err
 	}
 
-	d.logger.Infof("City was deleted successfully: %d", id)
+	d.logger.Infof("City was deleted successfully: %s", id)
 	return nil
 }
 
-func (d *DBAdapter) DeleteServCategory(id uint) error {
+func (d *DBAdapter) DeleteServCategory(id string) error {
 
 	tx := d.DBConn.Begin()
 	defer tx.Rollback()
@@ -518,24 +519,28 @@ func (d *DBAdapter) DeleteServCategory(id uint) error {
 		return err
 	}
 
-	d.logger.Infof("ServiceCategory was deleted successfully: %d", id)
+	d.logger.Infof("ServiceCategory was deleted successfully: %s", id)
 	return nil
 }
 
-func (d *DBAdapter) DeleteService(id uint) error {
+func (d *DBAdapter) DeleteService(id string) error {
 	if err := d.DBConn.Where("id = ?", id).Delete(&models.Service{}).Error; err != nil {
 		return err
 	}
 
-	d.logger.Infof("Service was deleted successfully: %d", id)
+	d.logger.Infof("Service was deleted successfully: %s", id)
 	return nil
 }
 
-func (d *DBAdapter) DeleteMaster(id uint) error {
+func (d *DBAdapter) DeleteMaster(id string) error {
 	if err := d.DBConn.Where("master_id = ?", id).Delete(&models.MasterServRelation{}).Error; err != nil {
 		return err
 	}
 
-	d.logger.Infof("Master was deleted successfully: %d", id)
+	if err := d.DBConn.Where("master_id = ?", id).Delete(&models.MasterImages{}).Error; err != nil {
+		return err
+	}
+
+	d.logger.Infof("Master was deleted successfully: %s", id)
 	return nil
 }

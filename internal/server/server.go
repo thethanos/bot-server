@@ -7,7 +7,6 @@ import (
 	"bot/internal/minioadapter"
 	handler "bot/internal/server/handler"
 	corsMiddleware "bot/internal/server/middleware"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -49,18 +48,8 @@ func NewServer(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.DB
 	deleteHandler.HandleFunc("/services/{service_id}", handler.DeleteService)
 	deleteHandler.HandleFunc("/masters/{master_id}", handler.DeleteMaster)
 
-	var addr string
-	switch cfg.Mode {
-	case config.DEBUG:
-		addr = fmt.Sprintf(":%d", cfg.DebugPort)
-	case config.RELEASE:
-		addr = fmt.Sprintf(":%d", cfg.ReleasePort)
-	default:
-		return nil, errors.New("Run mode is not specified")
-	}
-
 	return &http.Server{
 		Handler: corsMiddleware.CorsMiddlware(router),
-		Addr:    addr,
+		Addr:    fmt.Sprintf(":%d", cfg.Port),
 	}, nil
 }
