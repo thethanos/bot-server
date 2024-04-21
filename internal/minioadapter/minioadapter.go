@@ -73,6 +73,7 @@ func (m *MinIOAdapter) PutObject(bucketName, objectName string, file io.Reader, 
 	options := minio.PutObjectOptions{
 		ContentType: contentType,
 	}
+
 	if _, err := m.client.PutObject(context.Background(), bucketName, objectName, file, size, options); err != nil {
 		return err
 	}
@@ -82,9 +83,24 @@ func (m *MinIOAdapter) PutObject(bucketName, objectName string, file io.Reader, 
 }
 
 func (m *MinIOAdapter) DeleteObject(bucketName, objectName string) error {
+	if err := m.client.RemoveObject(context.Background(), bucketName, objectName, minio.RemoveObjectOptions{}); err != nil {
+		return err
+	}
+
+	m.logger.Infof("Object %s deletede from bucket %s", objectName, bucketName)
 	return nil
 }
 
 func (m *MinIOAdapter) DeleteBucket(bucketName string) error {
+
+	objects := m.client.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{})
+	for err := range m.client.RemoveObjects(context.Background(), bucketName, objects, minio.RemoveObjectsOptions{}) {
+		return err.Err
+	}
+	if err := m.client.RemoveBucket(context.Background(), bucketName); err != nil {
+		return err
+	}
+
+	m.logger.Infof("Bucket deleted: %s", bucketName)
 	return nil
 }

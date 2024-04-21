@@ -714,14 +714,17 @@ func (h *Handler) DeleteMaster(rw http.ResponseWriter, req *http.Request) {
 	h.logger.Infof("Request received: %s", req.URL)
 
 	params := mux.Vars(req)
+	masterID := params["master_id"]
 
-	if err := h.DBAdapter.DeleteMaster(params["master_id"]); err != nil {
+	if err := h.DBAdapter.DeleteMaster(masterID); err != nil {
 		h.logger.Error("server::DeleteMaster::DeleteMaster", err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// delete from minio here
+	if err := h.MinIOAdapter.DeleteBucket(masterID); err != nil {
+		h.logger.Error("server::DeleteMaster::DeleteBucket", err)
+	}
 
 	rw.WriteHeader(http.StatusOK)
 	h.logger.Info("Response sent")

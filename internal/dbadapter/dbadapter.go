@@ -225,6 +225,11 @@ func (d *DBAdapter) GetMasters(cityID, servCatID, servID string, page, limit int
 	return result, nil
 }
 
+func (d *DBAdapter) GetMaster(masterID string) (*entities.Master, error) {
+
+	return nil, nil
+}
+
 func (d *DBAdapter) GetMasterImageURLs(masterID string) ([]string, error) {
 
 	urlRecs := make([]*models.MasterImages, 0)
@@ -533,11 +538,19 @@ func (d *DBAdapter) DeleteService(id string) error {
 }
 
 func (d *DBAdapter) DeleteMaster(id string) error {
-	if err := d.DBConn.Where("master_id = ?", id).Delete(&models.MasterServRelation{}).Error; err != nil {
+
+	tx := d.DBConn.Begin()
+	defer tx.Rollback()
+
+	if err := tx.Where("master_id = ?", id).Delete(&models.MasterServRelation{}).Error; err != nil {
 		return err
 	}
 
-	if err := d.DBConn.Where("master_id = ?", id).Delete(&models.MasterImages{}).Error; err != nil {
+	if err := tx.Where("master_id = ?", id).Delete(&models.MasterImages{}).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
 		return err
 	}
 
