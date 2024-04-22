@@ -5,6 +5,7 @@ import (
 	"bot/internal/entities"
 	"bot/internal/mapper"
 	"bot/internal/models"
+	"errors"
 	"fmt"
 	"time"
 
@@ -225,9 +226,32 @@ func (d *DBAdapter) GetMasters(cityID, servCatID, servID string, page, limit int
 	return result, nil
 }
 
-func (d *DBAdapter) GetMaster(masterID string) (*entities.Master, error) {
+func (d *DBAdapter) GetMaster(masterID string) (*entities.MasterRegForm, error) {
 
-	return nil, nil
+	masterRows := make([]*models.MasterServRelation, 0)
+	if err := d.DBConn.Where("master_id = ?", masterID).Find(&masterRows).Error; err != nil {
+		return nil, err
+	}
+
+	if len(masterRows) == 0 {
+		return nil, errors.New("failed to find master in the system")
+	}
+
+	services := make([]string, 0)
+	for _, row := range masterRows {
+		services = append(services, row.ServID)
+	}
+
+	master := &entities.MasterRegForm{
+		Name:        masterRows[0].Name,
+		Description: masterRows[0].Description,
+		Contact:     masterRows[0].Contact,
+		CityID:      masterRows[0].CityID,
+		ServCatID:   masterRows[0].ServCatID,
+		ServIDs:     services,
+	}
+
+	return master, nil
 }
 
 func (d *DBAdapter) GetMasterImages(masterID string) ([]string, error) {

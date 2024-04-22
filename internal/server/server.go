@@ -25,6 +25,7 @@ func NewServer(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.DB
 	getRouter.HandleFunc("/services/categories", handler.GetServiceCategories)
 	getRouter.HandleFunc("/services", handler.GetServices)
 	getRouter.HandleFunc("/masters", handler.GetMasters)
+	getRouter.HandleFunc("/masters/{master_id}", handler.GetMaster)
 	getRouter.PathPrefix("/images").Handler(http.FileServer(http.Dir("/bot-server")))
 	getRouter.Handle("/docs", docHandler)
 	getRouter.Handle("/swagger.yaml", http.FileServer(http.Dir("/bot-server/docs")))

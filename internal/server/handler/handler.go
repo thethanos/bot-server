@@ -34,8 +34,8 @@ func NewHandler(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.D
 // @Summary Get cities
 // @Description Get all available cities
 // @Tags City
-// @Param page query string false "Page number for pagination"
-// @Param limit query string false "Limit of items for pagination"
+// @Param page query int false "Page number for pagination"
+// @Param limit query int false "Limit of items for pagination"
 // @Accept json
 // @Produce json
 // @Success 200 {array} entities.City
@@ -85,8 +85,8 @@ func (h *Handler) GetCities(rw http.ResponseWriter, req *http.Request) {
 // @Summary Get service categories
 // @Description Get all available service categories
 // @Tags Service
-// @Param page query string false "Page number for pagination"
-// @Param limit query string false "Limit of items for pagination"
+// @Param page query int false "Page number for pagination"
+// @Param limit query int false "Limit of items for pagination"
 // @Acept json
 // @Produce json
 // @Success 200 {array} entities.ServiceCategory
@@ -136,8 +136,8 @@ func (h *Handler) GetServiceCategories(rw http.ResponseWriter, req *http.Request
 // @Summary Get services
 // @Description Get all available services, filters by category_id if provided
 // @Tags Service
-// @Param page query string false "Page number for pagination"
-// @Param limit query string false "Limit of items for pagination"
+// @Param page query int false "Page number for pagination"
+// @Param limit query int false "Limit of items for pagination"
 // @Param category_id query string false "ID of the service category"
 // @Accept json
 // @Produce json
@@ -188,8 +188,8 @@ func (h *Handler) GetServices(rw http.ResponseWriter, req *http.Request) {
 // @Summary Get masters
 // @Description Get all available masters for the selected city and the service
 // @Tags Master
-// @Param page query string false "Page number for pagination"
-// @Param limit query string false "Limit of items for pagination"
+// @Param page query int false "Page number for pagination"
+// @Param limit query int false "Limit of items for pagination"
 // @Param city_id query string false "ID of the selected city"
 // @Param service_id query string false "ID of the seleted service"
 // @Accept json
@@ -233,6 +233,43 @@ func (h *Handler) GetMasters(rw http.ResponseWriter, req *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 	if _, err := rw.Write(mastersResp); err != nil {
 		h.logger.Error("server::GetMasters::Write", err)
+		return
+	}
+	h.logger.Info("Response sent")
+}
+
+// @Summary Get master
+// @Description Get the master by the given ID
+// @Tags Master
+// @Param master_id path string true "ID of the master"
+// @Accept json
+// @Produce json
+// @Success 200 {object} entities.MasterRegForm
+// @Failure 500 {string} string "Error message"
+// @Router /masters/{master_id} [get]
+func (h *Handler) GetMaster(rw http.ResponseWriter, req *http.Request) {
+	h.logger.Infof("Request received: %s", req.URL)
+
+	params := mux.Vars(req)
+	masterID := params["master_id"]
+
+	master, err := h.DBAdapter.GetMaster(masterID)
+	if err != nil {
+		h.logger.Error("server::GetMaster::GetMaster")
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	masterResp, err := json.Marshal(master)
+	if err != nil {
+		h.logger.Error("server::GetMaster::Marshal", err)
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	if _, err := rw.Write(masterResp); err != nil {
+		h.logger.Error("server::GetMaster::Write", err)
 		return
 	}
 	h.logger.Info("Response sent")
@@ -630,7 +667,7 @@ func (h *Handler) UpdateService(rw http.ResponseWriter, req *http.Request) {
 // @Summary Delete city
 // @Description Delete a city from the system
 // @Tags City
-// @Param city_id path uint true "ID of the city"
+// @Param city_id path string true "ID of the city"
 // @Accept json
 // @Produce json
 // @Success 200
@@ -654,7 +691,7 @@ func (h *Handler) DeleteCity(rw http.ResponseWriter, req *http.Request) {
 // @Summary Delete service category
 // @Description Delete a service category along with all its services from the system
 // @Tags Service
-// @Param category_id path uint true "ID of the service category"
+// @Param category_id path string true "ID of the service category"
 // @Accept json
 // @Produce json
 // @Success 200
@@ -676,9 +713,9 @@ func (h *Handler) DeleteServCategory(rw http.ResponseWriter, req *http.Request) 
 }
 
 // @Summary Delete service
-// @Description Delete a service  from the system
+// @Description Delete a service from the system
 // @Tags Service
-// @Param service_id path uint true "ID of the service"
+// @Param service_id path string true "ID of the service"
 // @Accept json
 // @Produce json
 // @Success 200
@@ -702,7 +739,7 @@ func (h *Handler) DeleteService(rw http.ResponseWriter, req *http.Request) {
 // @Summary Delete master
 // @Description Delete a master from the system
 // @Tags Master
-// @Param master_id path uint true "ID of the master"
+// @Param master_id path string true "ID of the master"
 // @Accept json
 // @Produce json
 // @Success 200
