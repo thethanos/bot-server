@@ -28,7 +28,7 @@ func FromServiceModel(model *models.Service) *entities.Service {
 	}
 }
 
-func FromMasterServRelationModel(model *models.MasterServRelation, imgURLs []string) *entities.Master {
+func FromMasterServRelationModel(model *models.MasterServRelation, images []string) *entities.Master {
 	return &entities.Master{
 		ID:          model.MasterID,
 		Name:        model.Name,
@@ -37,6 +37,6 @@ func FromMasterServRelationModel(model *models.MasterServRelation, imgURLs []str
 		CityName:    model.CityName,
 		ServCatName: model.ServCatName,
 		RegDate:     model.CreatedAt.Format("2006-01-02"),
-		ImageURLs:   imgURLs,
+		Images:      images,
 	}
 }

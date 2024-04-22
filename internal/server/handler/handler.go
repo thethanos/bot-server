@@ -467,16 +467,15 @@ func (h *Handler) SaveMasterImage(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	imgUrl := fmt.Sprintf("%s/%s/%s", h.cfg.ImagePrefix, masterID, meta.Filename)
-	if err := h.DBAdapter.SaveMasterImageURL(masterID, imgUrl); err != nil {
-		h.logger.Error("server::SaveMasterImage::SaveMasterImageURL", err)
+	if err := h.DBAdapter.SaveMasterImage(masterID, meta.Filename); err != nil {
+		h.logger.Error("server::SaveMasterImage::SaveMasterImage", err)
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusCreated)
-	if _, err := rw.Write([]byte(fmt.Sprintf(`{ "url" : "%s" }`, imgUrl))); err != nil {
+	if _, err := rw.Write([]byte(fmt.Sprintf(`{ "url" : "%s" }`, meta.Filename))); err != nil {
 		h.logger.Error("server::SaveMasterImage::Write", err)
 		return
 	}

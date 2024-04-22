@@ -216,11 +216,11 @@ func (d *DBAdapter) GetMasters(cityID, servCatID, servID string, page, limit int
 
 	result := make([]*entities.Master, 0)
 	for _, master := range masters {
-		urls, err := d.GetMasterImageURLs(master.MasterID)
+		images, err := d.GetMasterImages(master.MasterID)
 		if err != nil {
-			d.logger.Errorf("Failed to find image URLs for %d %s %s", master.MasterID, master.Name, err)
+			d.logger.Errorf("Failed to find image for %d %s %s", master.MasterID, master.Name, err)
 		}
-		result = append(result, mapper.FromMasterServRelationModel(master, urls))
+		result = append(result, mapper.FromMasterServRelationModel(master, images))
 	}
 	return result, nil
 }
@@ -230,16 +230,16 @@ func (d *DBAdapter) GetMaster(masterID string) (*entities.Master, error) {
 	return nil, nil
 }
 
-func (d *DBAdapter) GetMasterImageURLs(masterID string) ([]string, error) {
+func (d *DBAdapter) GetMasterImages(masterID string) ([]string, error) {
 
-	urlRecs := make([]*models.MasterImages, 0)
-	if err := d.DBConn.Where("master_id = ?", masterID).Find(&urlRecs).Error; err != nil {
+	imgRecs := make([]*models.MasterImages, 0)
+	if err := d.DBConn.Where("master_id = ?", masterID).Find(&imgRecs).Error; err != nil {
 		return nil, err
 	}
 
 	result := make([]string, 0)
-	for _, rec := range urlRecs {
-		result = append(result, rec.URL)
+	for _, rec := range imgRecs {
+		result = append(result, fmt.Sprintf("%s/%s/%s", d.cfg.ImagePrefix, masterID, rec.Name))
 	}
 
 	return result, nil
@@ -377,18 +377,18 @@ func (d *DBAdapter) SaveMaster(id string) (string, error) {
 	return id, nil
 }
 
-func (d *DBAdapter) SaveMasterImageURL(masterID, URL string) error {
+func (d *DBAdapter) SaveMasterImage(masterID, name string) error {
 
-	urlRec := models.MasterImages{
+	imgRec := models.MasterImages{
 		MasterID: masterID,
-		URL:      URL,
+		Name:     name,
 	}
 
-	if err := d.DBConn.Create(&urlRec).Error; err != nil {
+	if err := d.DBConn.Create(&imgRec).Error; err != nil {
 		return err
 	}
 
-	d.logger.Infof("Image url saved successfully, %s", URL)
+	d.logger.Infof("Image saved successfully, %s", name)
 	return nil
 }
 

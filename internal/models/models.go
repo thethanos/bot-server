@@ -55,5 +55,5 @@ type MasterRegForm struct {
 type MasterImages struct {
 	ID       uint   `gorm:"primaryKey;autoIncrement;notNull"`
 	MasterID string `gorm:"column:master_id;type:varchar(36);"`
-	URL      string `gorm:"url"`
+	Name     string `gorm:"name"`
 }

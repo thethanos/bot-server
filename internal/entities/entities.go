@@ -34,5 +34,5 @@ type Master struct {
 	CityName    string   `json:"cityName"`
 	ServCatName string   `json:"servCatName"`
 	RegDate     string   `json:"regDate"`
-	ImageURLs   []string `json:"imageURLs"`
+	Images      []string `json:"images"`
 }
