@@ -531,14 +531,13 @@ func (d *DBAdapter) UpdateMaster(master *entities.MasterLong) error {
 		return nil
 	}
 
-	services := make([]*models.Service, 0)
-	if err := tx.Where("cat_id = ?", updatedMaster.ServCatID).Find(&services).Error; err != nil {
-		return err
-	}
-
 	masterServRelations := make([]*models.MasterServRelation, 0)
 
-	for _, service := range services {
+	for _, servID := range updatedMaster.ServIDs {
+		service := &models.Service{}
+		if err := tx.Where("id = ?", servID).First(&service).Error; err != nil {
+			return err
+		}
 		record := &models.MasterServRelation{
 			MasterID:    updatedMaster.ID,
 			Name:        updatedMaster.Name,
