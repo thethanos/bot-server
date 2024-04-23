@@ -1,5 +1,11 @@
 package entities
 
+const (
+	PENDING = iota + 1
+	APPROVED
+	DECLINED
+)
+
 type City struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
@@ -17,16 +23,22 @@ type Service struct {
 	CatName string `json:"catName"`
 }
 
-type MasterRegForm struct {
+type Master struct {
 	Name        string   `json:"name" validate:"required"`
 	Description string   `json:"description,omitempty"`
 	Contact     string   `json:"contact" validate:"required"`
 	CityID      string   `json:"cityID" validate:"required"`
 	ServCatID   string   `json:"servCatID" validate:"required"`
 	ServIDs     []string `json:"servIDs" validate:"required"`
+	Status      uint     `json:"status" validate:"required"`
 }
 
-type Master struct {
+type MasterLong struct {
+	Master
+	ID string `json:"id" validate:"required"`
+}
+
+type MasterShort struct {
 	ID          string   `json:"id"`
 	Name        string   `json:"name"`
 	Description string   `json:"description"`

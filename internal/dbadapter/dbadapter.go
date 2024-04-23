@@ -5,7 +5,6 @@ import (
 	"bot/internal/entities"
 	"bot/internal/mapper"
 	"bot/internal/models"
-	"errors"
 	"fmt"
 	"time"
 
@@ -54,7 +53,7 @@ func (d *DBAdapter) AutoMigrate() error {
 	if err := d.DBConn.AutoMigrate(&models.MasterServRelation{}); err != nil {
 		return err
 	}
-	if err := d.DBConn.AutoMigrate(&models.MasterRegForm{}); err != nil {
+	if err := d.DBConn.AutoMigrate(&models.Master{}); err != nil {
 		return err
 	}
 	if err := d.DBConn.AutoMigrate(&models.MasterImages{}); err != nil {
@@ -197,7 +196,7 @@ func (d *DBAdapter) GetServicesByCategory(categoryID string, page, limit int) ([
 	return result, nil
 }
 
-func (d *DBAdapter) GetMasters(cityID, servCatID, servID string, page, limit int) ([]*entities.Master, error) {
+func (d *DBAdapter) GetMastersBot(cityID, servCatID, servID string, page, limit int) ([]*entities.MasterShort, error) {
 
 	query := d.DBConn.Offset(page * limit).Limit(limit)
 	if len(cityID) != 0 {
@@ -215,7 +214,7 @@ func (d *DBAdapter) GetMasters(cityID, servCatID, servID string, page, limit int
 		return nil, err
 	}
 
-	result := make([]*entities.Master, 0)
+	result := make([]*entities.MasterShort, 0)
 	for _, master := range masters {
 		images, err := d.GetMasterImages(master.MasterID)
 		if err != nil {
@@ -226,29 +225,49 @@ func (d *DBAdapter) GetMasters(cityID, servCatID, servID string, page, limit int
 	return result, nil
 }
 
-func (d *DBAdapter) GetMaster(masterID string) (*entities.MasterRegForm, error) {
+func (d *DBAdapter) GetMastersAdmin(page, limit int) ([]*entities.MasterShort, error) {
 
-	masterRows := make([]*models.MasterServRelation, 0)
-	if err := d.DBConn.Where("master_id = ?", masterID).Find(&masterRows).Error; err != nil {
+	masterRecs := make([]*models.Master, 0)
+	if err := d.DBConn.Find(&masterRecs).Offset(page * limit).Limit(limit).Error; err != nil {
 		return nil, err
 	}
 
-	if len(masterRows) == 0 {
-		return nil, errors.New("failed to find master in the system")
+	masters := make([]*entities.MasterShort, 0)
+	for _, rec := range masterRecs {
+		master := &entities.MasterShort{
+			ID:          rec.ID,
+			Name:        rec.Name,
+			Description: rec.Description,
+			Contact:     rec.Contact,
+			CityName:    rec.CityName,
+			ServCatName: rec.ServCatName,
+			RegDate:     rec.CreatedAt.Format("2006-01-02"),
+		}
+
+		masters = append(masters, master)
 	}
 
-	services := make([]string, 0)
-	for _, row := range masterRows {
-		services = append(services, row.ServID)
+	return masters, nil
+}
+
+func (d *DBAdapter) GetMaster(masterID string) (*entities.MasterLong, error) {
+
+	masterRec := &models.Master{}
+	if err := d.DBConn.Where("id = ?", masterID).First(&masterRec).Error; err != nil {
+		return nil, err
 	}
 
-	master := &entities.MasterRegForm{
-		Name:        masterRows[0].Name,
-		Description: masterRows[0].Description,
-		Contact:     masterRows[0].Contact,
-		CityID:      masterRows[0].CityID,
-		ServCatID:   masterRows[0].ServCatID,
-		ServIDs:     services,
+	master := &entities.MasterLong{
+		ID: masterID,
+		Master: entities.Master{
+			Name:        masterRec.Name,
+			Description: masterRec.Description,
+			Contact:     masterRec.Contact,
+			CityID:      masterRec.CityID,
+			ServCatID:   masterRec.ServCatID,
+			ServIDs:     masterRec.ServIDs,
+			Status:      masterRec.Status,
+		},
 	}
 
 	return master, nil
@@ -272,9 +291,8 @@ func (d *DBAdapter) GetMasterImages(masterID string) ([]string, error) {
 func (d *DBAdapter) SaveCity(name string) (string, error) {
 	id := uuid.NewString()
 	city := &models.City{
-		ID:        id,
-		CreatedAt: time.Now(),
-		Name:      name,
+		ID:   id,
+		Name: name,
 	}
 	if err := d.DBConn.Create(city).Error; err != nil {
 		return "", err
@@ -286,9 +304,8 @@ func (d *DBAdapter) SaveCity(name string) (string, error) {
 func (d *DBAdapter) SaveServiceCategory(name string) (string, error) {
 	id := uuid.NewString()
 	service := &models.ServiceCategory{
-		ID:        id,
-		CreatedAt: time.Now(),
-		Name:      name,
+		ID:   id,
+		Name: name,
 	}
 	if err := d.DBConn.Create(service).Error; err != nil {
 		return "", err
@@ -306,11 +323,10 @@ func (d *DBAdapter) SaveService(name, categoryID string) (string, error) {
 	}
 
 	service := &models.Service{
-		ID:        id,
-		CreatedAt: time.Now(),
-		Name:      name,
-		CatID:     category.ID,
-		CatName:   category.Name,
+		ID:      id,
+		Name:    name,
+		CatID:   category.ID,
+		CatName: category.Name,
 	}
 	if err := d.DBConn.Create(service).Error; err != nil {
 		return "", err
@@ -319,77 +335,37 @@ func (d *DBAdapter) SaveService(name, categoryID string) (string, error) {
 	return id, nil
 }
 
-func (d *DBAdapter) SaveMasterRegForm(master *entities.MasterRegForm) (string, error) {
-	city := models.City{}
-	if err := d.DBConn.Where("id = ?", master.CityID).First(&city).Error; err != nil {
+func (d *DBAdapter) SaveMaster(master *entities.Master) (string, error) {
+
+	tx := d.DBConn.Begin()
+	defer tx.Rollback()
+
+	city := &models.City{}
+	if err := tx.Where("id = ?", master.CityID).First(&city).Error; err != nil {
+		return "", err
+	}
+
+	servCat := &models.ServiceCategory{}
+	if err := tx.Where("id = ?", master.ServCatID).First(&servCat).Error; err != nil {
 		return "", err
 	}
 
 	id := uuid.NewString()
-	regForm := models.MasterRegForm{
+	masterRec := models.Master{
+		ID:          id,
 		CreatedAt:   time.Now(),
-		MasterID:    id,
 		Name:        master.Name,
 		Contact:     master.Contact,
 		Description: master.Description,
 		CityID:      city.ID,
 		CityName:    city.Name,
+		ServCatID:   servCat.ID,
+		ServCatName: servCat.Name,
+		ServIDs:     master.ServIDs,
+		Status:      entities.PENDING,
 	}
 
-	forms := make([]models.MasterRegForm, 0)
-	for _, servID := range master.ServIDs {
-		service := models.Service{}
-		if err := d.DBConn.Where("id = ?", servID).First(&service).Error; err != nil {
-			return "", err
-		}
-		regForm.ID = uuid.NewString()
-		regForm.ServCatID = service.CatID
-		regForm.ServCatName = service.CatName
-		regForm.ServID = service.ID
-		regForm.ServName = service.Name
-		forms = append(forms, regForm)
-	}
-
-	if err := d.DBConn.Create(&forms).Error; err != nil {
-		return "", err
-	}
-	d.logger.Infof("Form saved successfully, id: %s, name: %s", id, master.Name)
-	return id, nil
-}
-
-func (d *DBAdapter) SaveMaster(id string) (string, error) {
-
-	masters := make([]*models.MasterRegForm, 0)
-	if err := d.DBConn.Where("master_id = ?", id).Find(&masters).Error; err != nil {
-		return "", err
-	}
-
-	result := make([]*models.MasterServRelation, 0)
-	for _, master := range masters {
-		result = append(result, &models.MasterServRelation{
-			ID:          master.ID,
-			CreatedAt:   time.Now(),
-			MasterID:    master.MasterID,
-			Name:        master.Name,
-			Description: master.Description,
-			Contact:     master.Contact,
-			CityID:      master.CityID,
-			CityName:    master.CityName,
-			ServCatID:   master.ServCatID,
-			ServCatName: master.ServCatName,
-			ServID:      master.ServID,
-			ServName:    master.ServName,
-		})
-	}
-
-	tx := d.DBConn.Begin()
-	defer tx.Rollback()
-
-	if err := tx.Create(&result).Error; err != nil {
-		return "", err
-	}
-
-	if err := tx.Where("master_id = ?", id).Delete(&models.MasterRegForm{}).Error; err != nil {
+	if err := tx.Create(&masterRec).Error; err != nil {
 		return "", err
 	}
 
@@ -397,7 +373,7 @@ func (d *DBAdapter) SaveMaster(id string) (string, error) {
 		return "", err
 	}
 
-	d.logger.Infof("New master added successfully, id: %s", id)
+	d.logger.Infof("Form saved successfully, id: %s, name: %s", id, master.Name)
 	return id, nil
 }
 
@@ -419,9 +395,8 @@ func (d *DBAdapter) SaveMasterImage(masterID, name string) error {
 func (d *DBAdapter) UpdateCity(city *entities.City) error {
 
 	update := models.City{
-		ID:        city.ID,
-		CreatedAt: time.Now(),
-		Name:      city.Name,
+		ID:   city.ID,
+		Name: city.Name,
 	}
 
 	tx := d.DBConn.Begin()
@@ -447,9 +422,8 @@ func (d *DBAdapter) UpdateCity(city *entities.City) error {
 func (d *DBAdapter) UpdateServCategory(category *entities.ServiceCategory) error {
 
 	update := models.ServiceCategory{
-		ID:        category.ID,
-		CreatedAt: time.Now(),
-		Name:      category.Name,
+		ID:   category.ID,
+		Name: category.Name,
 	}
 
 	tx := d.DBConn.Begin()
@@ -485,11 +459,10 @@ func (d *DBAdapter) UpdateService(service *entities.Service) error {
 	}
 
 	update := models.Service{
-		ID:        service.ID,
-		CreatedAt: time.Now(),
-		CatID:     category.ID,
-		CatName:   category.Name,
-		Name:      service.Name,
+		ID:      service.ID,
+		CatID:   category.ID,
+		CatName: category.Name,
+		Name:    service.Name,
 	}
 
 	relation := models.MasterServRelation{
@@ -518,12 +491,95 @@ func (d *DBAdapter) UpdateService(service *entities.Service) error {
 	return nil
 }
 
-func (d *DBAdapter) UpdateMaster() {
+func (d *DBAdapter) UpdateMaster(master *entities.MasterLong) error {
 
+	tx := d.DBConn.Begin()
+	defer tx.Commit()
+
+	city := &models.City{}
+	if err := tx.Where("id = ?", master.CityID).First(&city).Error; err != nil {
+		return err
+	}
+
+	servCat := &models.ServiceCategory{}
+	if err := tx.Where("id = ?", master.ServCatID).First(&servCat).Error; err != nil {
+		return err
+	}
+
+	updatedMaster := models.Master{
+		ID:          master.ID,
+		Name:        master.Name,
+		Description: master.Description,
+		Contact:     master.Contact,
+		CityID:      city.ID,
+		CityName:    city.Name,
+		ServCatID:   servCat.ID,
+		ServCatName: servCat.Name,
+		ServIDs:     master.ServIDs,
+		Status:      entities.APPROVED,
+	}
+
+	if err := tx.Model(&models.Master{}).Where("id = ?", master.ID).UpdateColumns(&updatedMaster).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Where("master_id = ?", updatedMaster.ID).Delete(&models.MasterServRelation{}).Error; err != nil {
+		return err
+	}
+
+	if updatedMaster.Status != entities.APPROVED {
+		return nil
+	}
+
+	services := make([]*models.Service, 0)
+	if err := tx.Where("cat_id = ?", updatedMaster.ServCatID).Find(&services).Error; err != nil {
+		return err
+	}
+
+	masterServRelations := make([]*models.MasterServRelation, 0)
+
+	for _, service := range services {
+		record := &models.MasterServRelation{
+			MasterID:    updatedMaster.ID,
+			Name:        updatedMaster.Name,
+			Description: updatedMaster.Description,
+			Contact:     updatedMaster.Contact,
+			CityID:      city.ID,
+			CityName:    city.Name,
+			ServCatID:   servCat.ID,
+			ServCatName: servCat.Name,
+			ServID:      service.ID,
+			ServName:    service.Name,
+		}
+		masterServRelations = append(masterServRelations, record)
+	}
+
+	if err := tx.Create(&masterServRelations).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	d.logger.Infof("Master info updated successfully: %s", master.Name)
+	return nil
 }
 
 func (d *DBAdapter) DeleteCity(id string) error {
-	if err := d.DBConn.Where("id = ?", id).Delete(&models.City{}).Error; err != nil {
+
+	tx := d.DBConn.Begin()
+	defer tx.Rollback()
+
+	if err := tx.Where("id = ?", id).Delete(&models.City{}).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Where("city_id = ?", id).Delete(&models.MasterServRelation{}).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
 		return err
 	}
 
@@ -544,6 +600,10 @@ func (d *DBAdapter) DeleteServCategory(id string) error {
 		return err
 	}
 
+	if err := tx.Where("serv_cat_id = ?", id).Delete(&models.MasterServRelation{}).Error; err != nil {
+		return err
+	}
+
 	if err := tx.Commit().Error; err != nil {
 		return err
 	}
@@ -553,7 +613,19 @@ func (d *DBAdapter) DeleteServCategory(id string) error {
 }
 
 func (d *DBAdapter) DeleteService(id string) error {
-	if err := d.DBConn.Where("id = ?", id).Delete(&models.Service{}).Error; err != nil {
+
+	tx := d.DBConn.Begin()
+	defer tx.Rollback()
+
+	if err := tx.Where("id = ?", id).Delete(&models.Service{}).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Where("serv_id = ?", id).Delete(&models.MasterServRelation{}).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
 		return err
 	}
 
@@ -565,6 +637,10 @@ func (d *DBAdapter) DeleteMaster(id string) error {
 
 	tx := d.DBConn.Begin()
 	defer tx.Rollback()
+
+	if err := tx.Where("id = ?", id).Delete(&models.Master{}).Error; err != nil {
+		return err
+	}
 
 	if err := tx.Where("master_id = ?", id).Delete(&models.MasterServRelation{}).Error; err != nil {
 		return err
@@ -579,5 +655,59 @@ func (d *DBAdapter) DeleteMaster(id string) error {
 	}
 
 	d.logger.Infof("Master was deleted successfully: %s", id)
+	return nil
+}
+
+func (d *DBAdapter) ApproveMaster(id string) error {
+
+	tx := d.DBConn.Begin()
+	defer tx.Rollback()
+
+	master := &models.Master{}
+	if err := tx.Where("id = ?", id).First(&master).Error; err != nil {
+		return err
+	}
+
+	city := &models.City{}
+	if err := tx.Where("id = ?", master.CityID).First(&city).Error; err != nil {
+		return err
+	}
+
+	services := make([]*models.Service, 0)
+	if err := tx.Where("cat_id = ?", master.ServCatID).Find(&services).Error; err != nil {
+		return err
+	}
+
+	masterServRelations := make([]*models.MasterServRelation, 0)
+
+	for _, service := range services {
+		record := &models.MasterServRelation{
+			MasterID:    master.ID,
+			Name:        master.Name,
+			Description: master.Description,
+			Contact:     master.Contact,
+			CityID:      city.ID,
+			CityName:    city.Name,
+			ServCatID:   service.CatID,
+			ServCatName: service.CatName,
+			ServID:      service.ID,
+			ServName:    service.Name,
+		}
+		masterServRelations = append(masterServRelations, record)
+	}
+
+	if err := tx.Create(&masterServRelations).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Model(&models.Master{}).Where("id = ?", id).UpdateColumn("status", entities.APPROVED).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	d.logger.Infof("Master %s was approved", id)
 	return nil
 }

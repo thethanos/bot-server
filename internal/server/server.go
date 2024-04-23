@@ -24,7 +24,8 @@ func NewServer(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.DB
 	getRouter.HandleFunc("/cities", handler.GetCities)
 	getRouter.HandleFunc("/services/categories", handler.GetServiceCategories)
 	getRouter.HandleFunc("/services", handler.GetServices)
-	getRouter.HandleFunc("/masters", handler.GetMasters)
+	getRouter.HandleFunc("/masters/bot", handler.GetMastersBot)
+	getRouter.HandleFunc("/masters/admin", handler.GetMastersAdmin)
 	getRouter.HandleFunc("/masters/{master_id}", handler.GetMaster)
 	getRouter.PathPrefix("/images").Handler(http.FileServer(http.Dir("/bot-server")))
 	getRouter.Handle("/docs", docHandler)
@@ -34,7 +35,7 @@ func NewServer(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.DB
 	postRouter.HandleFunc("/cities", handler.SaveCity)
 	postRouter.HandleFunc("/services/categories", handler.SaveServiceCategory)
 	postRouter.HandleFunc("/services", handler.SaveService)
-	postRouter.HandleFunc("/masters", handler.SaveMasterRegForm)
+	postRouter.HandleFunc("/masters", handler.SaveMaster)
 	postRouter.HandleFunc("/masters/images/{master_id}", handler.SaveMasterImage)
 	postRouter.HandleFunc("/masters/approve/{master_id}", handler.ApproveMaster)
 
@@ -42,6 +43,7 @@ func NewServer(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.DB
 	putHandler.HandleFunc("/cities", handler.UpdateCity)
 	putHandler.HandleFunc("/services/categories", handler.UpdateServCategory)
 	putHandler.HandleFunc("/services", handler.UpdateService)
+	putHandler.HandleFunc("/masters", handler.UpdateMaster)
 
 	deleteHandler := router.Methods(http.MethodDelete).Subrouter()
 	deleteHandler.HandleFunc("/cities/{city_id}", handler.DeleteCity)
