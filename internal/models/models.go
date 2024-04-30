@@ -50,9 +50,3 @@ type Master struct {
 	ServIDs     pq.StringArray `gorm:"column:serv_ids;type:text[];"`
 	Status      uint           `gorm:"status"`
 }
-
-type MasterImages struct {
-	ID       uint   `gorm:"primaryKey;autoIncrement;notNull"`
-	MasterID string `gorm:"column:master_id;type:varchar(36);"`
-	Name     string `gorm:"name"`
-}

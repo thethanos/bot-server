@@ -56,9 +56,6 @@ func (d *DBAdapter) AutoMigrate() error {
 	if err := d.DBConn.AutoMigrate(&models.Master{}); err != nil {
 		return err
 	}
-	if err := d.DBConn.AutoMigrate(&models.MasterImages{}); err != nil {
-		return err
-	}
 	d.logger.Info("Auto-migration: success")
 	return nil
 }
@@ -216,11 +213,7 @@ func (d *DBAdapter) GetMastersBot(cityID, servCatID, servID string, page, limit 
 
 	result := make([]*entities.MasterShort, 0)
 	for _, master := range masters {
-		images, err := d.GetMasterImages(master.MasterID)
-		if err != nil {
-			d.logger.Errorf("Failed to find image for %d %s %s", master.MasterID, master.Name, err)
-		}
-		result = append(result, mapper.FromMasterServRelationModel(master, images))
+		result = append(result, mapper.FromMasterServRelationModel(master))
 	}
 	return result, nil
 }
@@ -271,21 +264,6 @@ func (d *DBAdapter) GetMaster(masterID string) (*entities.MasterLong, error) {
 	}
 
 	return master, nil
-}
-
-func (d *DBAdapter) GetMasterImages(masterID string) ([]string, error) {
-
-	imgRecs := make([]*models.MasterImages, 0)
-	if err := d.DBConn.Where("master_id = ?", masterID).Find(&imgRecs).Error; err != nil {
-		return nil, err
-	}
-
-	result := make([]string, 0)
-	for _, rec := range imgRecs {
-		result = append(result, fmt.Sprintf("%s/%s/%s", d.cfg.ImagePrefix, masterID, rec.Name))
-	}
-
-	return result, nil
 }
 
 func (d *DBAdapter) SaveCity(name string) (string, error) {
@@ -375,21 +353,6 @@ func (d *DBAdapter) SaveMaster(master *entities.Master) (string, error) {
 
 	d.logger.Infof("Form saved successfully, id: %s, name: %s", id, master.Name)
 	return id, nil
-}
-
-func (d *DBAdapter) SaveMasterImage(masterID, name string) error {
-
-	imgRec := models.MasterImages{
-		MasterID: masterID,
-		Name:     name,
-	}
-
-	if err := d.DBConn.Create(&imgRec).Error; err != nil {
-		return err
-	}
-
-	d.logger.Infof("Image saved successfully, %s", name)
-	return nil
 }
 
 func (d *DBAdapter) UpdateCity(city *entities.City) error {
@@ -642,10 +605,6 @@ func (d *DBAdapter) DeleteMaster(id string) error {
 	}
 
 	if err := tx.Where("master_id = ?", id).Delete(&models.MasterServRelation{}).Error; err != nil {
-		return err
-	}
-
-	if err := tx.Where("master_id = ?", id).Delete(&models.MasterImages{}).Error; err != nil {
 		return err
 	}
 

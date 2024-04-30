@@ -223,6 +223,10 @@ func (h *Handler) GetMastersBot(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	for index, _ := range masters {
+		masters[index].Images = h.MinIOAdapter.GetBucketObjectsURLs(masters[index].ID)
+	}
+
 	mastersResp, err := json.Marshal(masters)
 	if err != nil {
 		h.logger.Error("server::GetMastersBot::Marshal", err)
@@ -552,12 +556,6 @@ func (h *Handler) SaveMasterImage(rw http.ResponseWriter, req *http.Request) {
 	if err := h.MinIOAdapter.PutObject(masterID, meta.Filename, formFile, meta.Size, meta.Header.Get("Content-Type")); err != nil {
 		h.logger.Error("server::SaveMasterImage::PutObject", err)
 		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err := h.DBAdapter.SaveMasterImage(masterID, meta.Filename); err != nil {
-		h.logger.Error("server::SaveMasterImage::SaveMasterImage", err)
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

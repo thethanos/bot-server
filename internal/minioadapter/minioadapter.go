@@ -21,7 +21,7 @@ func NewMinIOAdapter(logger logger.Logger, cfg *config.Config) (*MinIOAdapter, e
 
 	options := &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.MinIOUser, cfg.MinIOPass, ""),
-		Secure: false,
+		Secure: true,
 	}
 
 	client, err := minio.New(fmt.Sprintf("%s:%d", cfg.MinIOHost, cfg.MinIOPort), options)
@@ -80,6 +80,15 @@ func (m *MinIOAdapter) PutObject(bucketName, objectName string, file io.Reader, 
 
 	m.logger.Infof("Object saved: %s %s", bucketName, objectName)
 	return nil
+}
+
+func (m *MinIOAdapter) GetBucketObjectsURLs(bucketName string) []string {
+
+	list := make([]string, 0)
+	for object := range m.client.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{}) {
+		list = append(list, fmt.Sprintf("%s/%s/%s", m.cfg.ImagePrefix, bucketName, object.Key))
+	}
+	return list
 }
 
 func (m *MinIOAdapter) DeleteObject(bucketName, objectName string) error {
