@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
@@ -213,7 +214,7 @@ func (h *Handler) SaveMaster(rw http.ResponseWriter, req *http.Request) {
 // @Success 201 {object} URL "URL of the saved picture"
 // @Failure 400 {string} string "Error message"
 // @Failure 500 {string} string "Error message"
-// @Router /masters/images/{master_id} [post]
+// @Router /masters/{master_id}/images [post]
 func (h *Handler) SaveMasterImage(rw http.ResponseWriter, req *http.Request) {
 	h.logger.Infof("Request received: %s %s", req.Method, req.URL)
 
@@ -234,7 +235,8 @@ func (h *Handler) SaveMasterImage(rw http.ResponseWriter, req *http.Request) {
 	}
 	defer formFile.Close()
 
-	if err := h.MinIOAdapter.PutMasterImage(masterID, meta.Filename, formFile, meta.Size, meta.Header.Get("Content-Type")); err != nil {
+	newImageName := uuid.NewString()
+	if err := h.MinIOAdapter.PutMasterImage(masterID, newImageName, formFile, meta.Size, meta.Header.Get("Content-Type")); err != nil {
 		h.logger.Error("server::SaveMasterImage::PutMasterImage", err)
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
@@ -242,7 +244,7 @@ func (h *Handler) SaveMasterImage(rw http.ResponseWriter, req *http.Request) {
 
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusCreated)
-	if _, err := rw.Write([]byte(fmt.Sprintf(`{ "url" : "%s" }`, meta.Filename))); err != nil {
+	if _, err := rw.Write([]byte(fmt.Sprintf(`{ "url" : "%s" }`, newImageName))); err != nil {
 		h.logger.Error("server::SaveMasterImage::Write", err)
 		return
 	}

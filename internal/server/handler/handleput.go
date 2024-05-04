@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
@@ -210,8 +210,7 @@ func (h *Handler) UpdateMasterImage(rw http.ResponseWriter, req *http.Request) {
 	}
 	defer formFile.Close()
 
-	updatedImageName := fmt.Sprintf("%s_%s", imageName, time.Now())
-	if err := h.MinIOAdapter.PutMasterImage(masterID, updatedImageName, formFile, meta.Size, meta.Header.Get("Content-Type")); err != nil {
+	if err := h.MinIOAdapter.PutMasterImage(masterID, uuid.NewString(), formFile, meta.Size, meta.Header.Get("Content-Type")); err != nil {
 		h.logger.Error("server::UpdateMasterImage::PutMasterImage", err)
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
