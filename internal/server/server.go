@@ -5,7 +5,7 @@ import (
 	"bot/internal/dbadapter"
 	"bot/internal/logger"
 	"bot/internal/minioadapter"
-	handler "bot/internal/server/handler"
+	"bot/internal/server/handler"
 	corsMiddleware "bot/internal/server/middleware"
 	"fmt"
 	"net/http"
@@ -27,6 +27,7 @@ func NewServer(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.DB
 	getRouter.HandleFunc("/masters/bot", handler.GetMastersBot)
 	getRouter.HandleFunc("/masters/admin", handler.GetMastersAdmin)
 	getRouter.HandleFunc("/masters/{master_id}", handler.GetMaster)
+	getRouter.HandleFunc("/masters/{master_id}/images", handler.GetMasterImages)
 	getRouter.Handle("/docs", docHandler)
 	getRouter.Handle("/swagger.yaml", http.FileServer(http.Dir("/bot-server/docs")))
 
@@ -35,7 +36,7 @@ func NewServer(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.DB
 	postRouter.HandleFunc("/services/categories", handler.SaveServiceCategory)
 	postRouter.HandleFunc("/services", handler.SaveService)
 	postRouter.HandleFunc("/masters", handler.SaveMaster)
-	postRouter.HandleFunc("/masters/images/{master_id}", handler.SaveMasterImage)
+	postRouter.HandleFunc("/masters/{master_id}/images", handler.SaveMasterImage)
 	postRouter.HandleFunc("/masters/approve/{master_id}", handler.ApproveMaster)
 
 	putHandler := router.Methods(http.MethodPut).Subrouter()
@@ -49,6 +50,7 @@ func NewServer(logger logger.Logger, cfg *config.Config, DBAdapter *dbadapter.DB
 	deleteHandler.HandleFunc("/services/categories/{category_id}", handler.DeleteServCategory)
 	deleteHandler.HandleFunc("/services/{service_id}", handler.DeleteService)
 	deleteHandler.HandleFunc("/masters/{master_id}", handler.DeleteMaster)
+	deleteHandler.HandleFunc("/masters/{master_id}/images/{image_name}", handler.DeleteMasterImage)
 
 	return &http.Server{
 		Handler: corsMiddleware.CorsMiddlware(router),

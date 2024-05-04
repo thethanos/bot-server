@@ -23,6 +23,11 @@ type Service struct {
 	CatName string `json:"catName"`
 }
 
+type Image struct {
+	Name string `json:"name" validate:"required"`
+	URL  string `json:"url" validate:"required"`
+}
+
 type Master struct {
 	Name        string   `json:"name" validate:"required"`
 	Description string   `json:"description,omitempty"`

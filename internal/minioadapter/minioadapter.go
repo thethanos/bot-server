@@ -2,6 +2,7 @@ package minioadapter
 
 import (
 	"bot/internal/config"
+	"bot/internal/entities"
 	"bot/internal/logger"
 	"context"
 	"fmt"
@@ -69,7 +70,28 @@ func (m *MinIOAdapter) MakeBucket(bucketName string) error {
 	return nil
 }
 
-func (m *MinIOAdapter) PutObject(bucketName, objectName string, file io.Reader, size int64, contentType string) error {
+func (m *MinIOAdapter) GetMasterImagesURLs(bucketName string) []string {
+
+	list := make([]string, 0)
+	for object := range m.client.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{}) {
+		list = append(list, fmt.Sprintf("%s/%s/%s", m.cfg.ImagePrefix, bucketName, object.Key))
+	}
+	return list
+}
+
+func (m *MinIOAdapter) GetMasterImages(bucketName string) []*entities.Image {
+	list := make([]*entities.Image, 0)
+	for object := range m.client.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{}) {
+		image := &entities.Image{
+			Name: object.Key,
+			URL:  fmt.Sprintf("%s/%s/%s", m.cfg.ImagePrefix, bucketName, object.Key),
+		}
+		list = append(list, image)
+	}
+	return list
+}
+
+func (m *MinIOAdapter) PutMasterImage(bucketName, objectName string, file io.Reader, size int64, contentType string) error {
 	options := minio.PutObjectOptions{
 		ContentType: contentType,
 	}
@@ -82,16 +104,7 @@ func (m *MinIOAdapter) PutObject(bucketName, objectName string, file io.Reader, 
 	return nil
 }
 
-func (m *MinIOAdapter) GetBucketObjectsURLs(bucketName string) []string {
-
-	list := make([]string, 0)
-	for object := range m.client.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{}) {
-		list = append(list, fmt.Sprintf("%s/%s/%s", m.cfg.ImagePrefix, bucketName, object.Key))
-	}
-	return list
-}
-
-func (m *MinIOAdapter) DeleteObject(bucketName, objectName string) error {
+func (m *MinIOAdapter) DeleteMasterImage(bucketName, objectName string) error {
 	if err := m.client.RemoveObject(context.Background(), bucketName, objectName, minio.RemoveObjectOptions{}); err != nil {
 		return err
 	}
@@ -100,7 +113,7 @@ func (m *MinIOAdapter) DeleteObject(bucketName, objectName string) error {
 	return nil
 }
 
-func (m *MinIOAdapter) DeleteBucket(bucketName string) error {
+func (m *MinIOAdapter) DeleteMasterImages(bucketName string) error {
 
 	objects := m.client.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{})
 	for err := range m.client.RemoveObjects(context.Background(), bucketName, objects, minio.RemoveObjectsOptions{}) {
